@@ -8,8 +8,7 @@ import jakarta.validation.constraints.Email;
 @Data
 public class EmailDto {
     @NotBlank(message = "Email не может быть пустым")
-    @NotEmpty
     @Email
-    private String email;
+    public String email;
 
 }

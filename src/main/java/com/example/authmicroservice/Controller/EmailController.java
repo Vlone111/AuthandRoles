@@ -16,7 +16,7 @@ public class EmailController {
     private final EmailService emailService;
 
     @PostMapping("/login")
-    public ResponseEntity<?> loginWithEmail(@RequestParam EmailDto emailTo) {
+    public ResponseEntity<?> loginWithEmail(@RequestBody EmailDto emailTo) {
         try {
             String subject = "Для того чтобы зайти на наш сайт введите данные 4х значный код";
             int ramndom = (int)(Math.random() * 9000) + 1000;
