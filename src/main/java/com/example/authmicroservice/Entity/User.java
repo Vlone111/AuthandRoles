@@ -1,7 +1,7 @@
 package com.example.authmicroservice.Entity;
 
 
-import jakarta.annotation.PostConstruct;
+
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -19,6 +19,7 @@ public class User {
     //@Valid нужно ли это хз
     private String email;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Roles role;
 

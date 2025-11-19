@@ -39,19 +39,25 @@ public class EmailController {
         return ResponseEntity.ok("Код с подтверждением был отправлен на "+ emailTo);
     }
 
-
-    @PostMapping("/confirm")
+    //to do: ошибки поправить вывод нормальный
+    @PostMapping("/confirm") //контроллер для подтверждения одноразового пароля и создания юзера
     public ResponseEntity<?> confirmEmail(@RequestBody EmailConfirmRequest emailConfirmRequest) {
         if(emailConfirmRequest.getOtp()!=null){
             String otp = redisService.getOtp(emailConfirmRequest.getEmail(),emailConfirmRequest.getOtp());
-            if(otp!=null && emailConfirmRequest.getOtp().equals(otp)){
+            if(emailConfirmRequest.getOtp().equals(otp)){
                 if(!userRepository.existsByEmail(emailConfirmRequest.getEmail())) {
                     userService.createUser(emailConfirmRequest.getEmail());
                 }
                 return ResponseEntity.ok("Пароль Подтвержден, вы вошли в свой аккаунт");
             }
+            else{
+                return ResponseEntity.badRequest().body("Срок вашего кода либо истек либо код неверен");
+            }
         }
         return ResponseEntity.badRequest().build();
     }
-
+    @PostMapping("/create")
+    public ResponseEntity<?> saveUser(@RequestBody String email) {
+        return ResponseEntity.ok(userService.createUser(email));
+    }
 }
