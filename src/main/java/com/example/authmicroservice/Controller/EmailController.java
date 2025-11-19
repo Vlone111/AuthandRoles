@@ -1,8 +1,12 @@
 package com.example.authmicroservice.Controller;
 
 
-import com.example.authmicroservice.Dto.EmailDto;
+import com.example.authmicroservice.Dao.UserRepository;
+import com.example.authmicroservice.Dto.EmailConfirmRequest;
+import com.example.authmicroservice.Dto.EmailRequest;
 import com.example.authmicroservice.Service.EmailService;
+import com.example.authmicroservice.Service.RedisService;
+import com.example.authmicroservice.Service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,20 +18,40 @@ import org.springframework.web.bind.annotation.*;
 public class EmailController {
 
     private final EmailService emailService;
+    private final UserRepository userRepository;
+    private final UserService userService;
+    private final RedisService redisService;
+
 
     @PostMapping("/login")
-    public ResponseEntity<?> loginWithEmail(@RequestBody EmailDto emailTo) {
+    public ResponseEntity<?> loginWithEmail(@RequestBody EmailRequest emailTo) {
         try {
             String subject = "Для того чтобы зайти на наш сайт введите данные 4х значный код";
             int ramndom = (int)(Math.random() * 9000) + 1000;
             String randomintvalue = String.valueOf(ramndom);
+            redisService.setOtp(emailTo.getEmail(), randomintvalue);
             emailService.sendEmail(emailTo.getEmail(),subject,randomintvalue);
         }
         catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }
+
         return ResponseEntity.ok("Код с подтверждением был отправлен на "+ emailTo);
     }
 
+
+    @PostMapping("/confirm")
+    public ResponseEntity<?> confirmEmail(@RequestBody EmailConfirmRequest emailConfirmRequest) {
+        if(emailConfirmRequest.getOtp()!=null){
+            String otp = redisService.getOtp(emailConfirmRequest.getEmail(),emailConfirmRequest.getOtp());
+            if(otp!=null && emailConfirmRequest.getOtp().equals(otp)){
+                if(!userRepository.existsByEmail(emailConfirmRequest.getEmail())) {
+                    userService.createUser(emailConfirmRequest.getEmail());
+                }
+                return ResponseEntity.ok("Пароль Подтвержден, вы вошли в свой аккаунт");
+            }
+        }
+        return ResponseEntity.badRequest().build();
+    }
 
 }

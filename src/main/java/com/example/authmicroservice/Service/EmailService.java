@@ -20,6 +20,12 @@ public class EmailService {
         message.setSubject(subject);
         message.setText(body);
         message.setFrom(username);
-        mailSender.send(message);
+        try {
+            mailSender.send(message);
+        }
+        catch (Exception e) {}
     }
+
+
+
 }
