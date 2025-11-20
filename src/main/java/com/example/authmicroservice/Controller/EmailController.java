@@ -4,6 +4,9 @@ package com.example.authmicroservice.Controller;
 import com.example.authmicroservice.Dao.UserRepository;
 import com.example.authmicroservice.Dto.EmailConfirmRequest;
 import com.example.authmicroservice.Dto.EmailRequest;
+import com.example.authmicroservice.Entity.User;
+import com.example.authmicroservice.Jwt.JwtCore;
+import com.example.authmicroservice.Jwt.UserDetailsImpl;
 import com.example.authmicroservice.Service.EmailService;
 import com.example.authmicroservice.Service.RedisService;
 import com.example.authmicroservice.Service.UserService;
@@ -21,6 +24,7 @@ public class EmailController {
     private final UserRepository userRepository;
     private final UserService userService;
     private final RedisService redisService;
+    private final JwtCore jwtCore;
 
 
     @PostMapping("/login")
@@ -45,10 +49,15 @@ public class EmailController {
         if(emailConfirmRequest.getOtp()!=null){
             String otp = redisService.getOtp(emailConfirmRequest.getEmail(),emailConfirmRequest.getOtp());
             if(emailConfirmRequest.getOtp().equals(otp)){
-                if(!userRepository.existsByEmail(emailConfirmRequest.getEmail())) {
-                    userService.createUser(emailConfirmRequest.getEmail());
+                try {
+                    User user = userService.createUser(emailConfirmRequest.getEmail());
+                    jwtCore.generateAccessToken(UserDetailsImpl.build(user));
+                    return ResponseEntity.ok("Пароль Подтвержден, вы вошли в свой аккаунт");
                 }
-                return ResponseEntity.ok("Пароль Подтвержден, вы вошли в свой аккаунт");
+                catch (Exception e) { //юзер exist в обработчике
+                    jwtCore.generateAccessToken(UserDetailsImpl.build(userRepository.findByEmail(emailConfirmRequest.getEmail()).orElseThrow()));
+                    return ResponseEntity.ok("Пароль Подтвержден, вы вошли в свой аккаунт");
+                }
             }
             else{
                 return ResponseEntity.badRequest().body("Срок вашего кода либо истек либо код неверен");
@@ -56,8 +65,6 @@ public class EmailController {
         }
         return ResponseEntity.badRequest().build();
     }
-    @PostMapping("/create")
-    public ResponseEntity<?> saveUser(@RequestBody String email) {
-        return ResponseEntity.ok(userService.createUser(email));
-    }
+
+
 }
