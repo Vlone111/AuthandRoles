@@ -10,8 +10,8 @@ import com.example.authmicroservice.Jwt.UserDetailsImpl;
 import com.example.authmicroservice.Service.EmailService;
 import com.example.authmicroservice.Service.RedisService;
 import com.example.authmicroservice.Service.UserService;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -37,7 +37,7 @@ public class EmailController {
             emailService.sendEmail(emailTo.getEmail(),subject,randomintvalue);
         }
         catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+            return ResponseEntity.status(400).body(e.getMessage());
         }
 
         return ResponseEntity.ok("Код с подтверждением был отправлен на "+ emailTo.getEmail());
@@ -45,29 +45,42 @@ public class EmailController {
 
     //to do: ошибки поправить вывод нормальный
     @PostMapping("/confirm") //контроллер для подтверждения одноразового пароля и создания юзера
-    public ResponseEntity<?> confirmEmail(@RequestBody EmailConfirmRequest emailConfirmRequest) {
+    public ResponseEntity<?> confirmEmail(@RequestBody EmailConfirmRequest emailConfirmRequest, HttpServletResponse response) {
+        UserDetailsImpl userDetails;
         if(emailConfirmRequest.getOtp()!=null){
             String otp = redisService.getOtp(emailConfirmRequest.getEmail(),emailConfirmRequest.getOtp());
             if(emailConfirmRequest.getOtp().equals(otp)){
                 try {
                     User user = userService.createUser(emailConfirmRequest.getEmail());
+                    userDetails = UserDetailsImpl.build(user);
+                    jwtCore.putRefreshinHttpCockieOnly(jwtCore.generateRefreshToken(userDetails),response);
                     return ResponseEntity.ok("Пароль Подтвержден, вы вошли в свой аккаунт ваш access токен: "+jwtCore
                             .generateAccessToken(UserDetailsImpl.build(user)));
                 }
-                catch (Exception e) { //юзер exist в обработчике
-                    jwtCore.generateAccessToken(UserDetailsImpl.build(userRepository.findByEmail(emailConfirmRequest.getEmail()).orElseThrow()));
-                    return ResponseEntity.ok("Пароль Подтвержден, вы вошли в свой аккаунт ваш access токен: "+jwtCore
-                            .generateAccessToken(UserDetailsImpl
-                                    .build(userRepository
-                                            .findByEmail(emailConfirmRequest.getEmail()).orElseThrow())));
+                catch (Exception e) {
+                    userDetails = UserDetailsImpl
+                            .build(userRepository
+                                    .findByEmail(emailConfirmRequest.getEmail()).orElseThrow());
+                    jwtCore.putRefreshinHttpCockieOnly(jwtCore.generateRefreshToken(userDetails),response);
+                    String accessToken = jwtCore.generateAccessToken(UserDetailsImpl
+                            .build(userRepository
+                                    .findByEmail(emailConfirmRequest.getEmail()).orElseThrow()));
+                    return ResponseEntity.ok("Пароль Подтвержден, вы вошли в свой аккаунт ваш access токен: "+accessToken);
                 }
             }
             else{
-                return ResponseEntity.badRequest().body("Срок вашего кода либо истек либо код неверен");
+                return ResponseEntity.status(403).body("Срок вашего кода либо истек либо код неверен");
             }
         }
         return ResponseEntity.badRequest().build();
     }
-
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refresh(@CookieValue(value = "refreshToken", required = false) String refreshToken) {
+        try {
+            return ResponseEntity.ok(jwtCore.refreshacessToken(refreshToken));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(403).body(e.getMessage());
+        }
+    }
 
 }
