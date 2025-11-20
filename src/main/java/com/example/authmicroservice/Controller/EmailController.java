@@ -40,7 +40,7 @@ public class EmailController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }
 
-        return ResponseEntity.ok("Код с подтверждением был отправлен на "+ emailTo);
+        return ResponseEntity.ok("Код с подтверждением был отправлен на "+ emailTo.getEmail());
     }
 
     //to do: ошибки поправить вывод нормальный
@@ -51,12 +51,15 @@ public class EmailController {
             if(emailConfirmRequest.getOtp().equals(otp)){
                 try {
                     User user = userService.createUser(emailConfirmRequest.getEmail());
-                    jwtCore.generateAccessToken(UserDetailsImpl.build(user));
-                    return ResponseEntity.ok("Пароль Подтвержден, вы вошли в свой аккаунт");
+                    return ResponseEntity.ok("Пароль Подтвержден, вы вошли в свой аккаунт ваш access токен: "+jwtCore
+                            .generateAccessToken(UserDetailsImpl.build(user)));
                 }
                 catch (Exception e) { //юзер exist в обработчике
                     jwtCore.generateAccessToken(UserDetailsImpl.build(userRepository.findByEmail(emailConfirmRequest.getEmail()).orElseThrow()));
-                    return ResponseEntity.ok("Пароль Подтвержден, вы вошли в свой аккаунт");
+                    return ResponseEntity.ok("Пароль Подтвержден, вы вошли в свой аккаунт ваш access токен: "+jwtCore
+                            .generateAccessToken(UserDetailsImpl
+                                    .build(userRepository
+                                            .findByEmail(emailConfirmRequest.getEmail()).orElseThrow())));
                 }
             }
             else{

@@ -26,4 +26,9 @@ public class UserController {
     public ResponseEntity<?> existbyemail(@RequestBody String email) {
         return ResponseEntity.ok(userRepository.existsByEmail(email));
     }
+
+    @GetMapping("/users")
+    public ResponseEntity<List<User>> getall() {
+        return ResponseEntity.ok(userRepository.findAll());
+    }
 }
