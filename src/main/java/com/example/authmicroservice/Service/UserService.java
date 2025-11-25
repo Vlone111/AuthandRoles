@@ -7,6 +7,8 @@ import com.example.authmicroservice.Entity.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.security.Principal;
+
 @Service
 @RequiredArgsConstructor
 public class UserService {
@@ -19,5 +21,12 @@ public class UserService {
         user.setRole(Roles.USER);
         userRepository.save(user);
         return user;
+    }
+
+    public User setSurnameAndName(String surname, String name, Principal principal){
+        User user = userRepository.findByEmail(principal.getName()).orElseThrow();
+        user.setSurname(surname);
+        user.setName(name);
+        return userRepository.save(user);
     }
 }

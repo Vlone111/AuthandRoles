@@ -19,6 +19,13 @@ public class User {
     //@Valid нужно ли это хз
     private String email;
 
+    @Column(name = "name")
+    private String name;
+
+    @Column(name = "surname")
+    private String surname;
+
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Roles role;
